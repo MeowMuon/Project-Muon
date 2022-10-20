@@ -11,9 +11,14 @@ AMU_FirstCharacter::AMU_FirstCharacter()
 
 	m_SpringArmComp = CreateDefaultSubobject<USpringArmComponent>("SpringArm");
 	m_SpringArmComp->SetupAttachment(RootComponent);
+	m_SpringArmComp->bUsePawnControlRotation = true;
 
 	m_CameraComp = CreateDefaultSubobject<UCameraComponent>("Camera");
 	m_CameraComp->SetupAttachment(m_SpringArmComp);
+
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+
+	bUseControllerRotationYaw = false;
 }
 
 // Called when the game starts or when spawned
@@ -25,12 +30,20 @@ void AMU_FirstCharacter::BeginPlay()
 
 void AMU_FirstCharacter::move_forward(float value)
 {
-	AddMovementInput(GetActorForwardVector(), value);
+	AddMovementInput(FRotator(0, GetControlRotation().Yaw, 0).Vector(), value);
 }
 
 void AMU_FirstCharacter::move_right(float value)
 {
-	AddMovementInput(GetActorRightVector(), value);
+	AddMovementInput(FRotationMatrix(GetControlRotation()).GetScaledAxis(EAxis::Y), value);
+}
+
+void AMU_FirstCharacter::primary_attack()
+{
+	FTransform SpawnTransform = FTransform(GetControlRotation(), GetActorLocation());
+	FActorSpawnParameters SpawnParameter;
+	SpawnParameter.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	GetWorld()->SpawnActor<AActor>(m_ProjectileClass, SpawnTransform, SpawnParameter);
 }
 
 // Called every frame
@@ -49,5 +62,7 @@ void AMU_FirstCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMU_FirstCharacter::move_right);
 	PlayerInputComponent->BindAxis("TurnRight", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("TurnUp", this, &APawn::AddControllerPitchInput);
+
+	PlayerInputComponent->BindAction("PrimaryAttack", IE_Pressed, this, &AMU_FirstCharacter::primary_attack);
 }
 
